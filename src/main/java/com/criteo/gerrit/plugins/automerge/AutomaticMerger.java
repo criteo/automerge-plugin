@@ -15,18 +15,19 @@
 package com.criteo.gerrit.plugins.automerge;
 
 import com.google.gerrit.extensions.events.LifecycleListener;
-import com.google.gerrit.extensions.registration.DynamicSet;
-import com.google.inject.AbstractModule;
 
 /**
- * Main automerge Guice module.
- *
- * Configures how all classes in the plugin are instantiated via Guice.
+ * Starts at the same time as the gerrit server, and sets up our
+ * change hook listener.
  */
-public class Module extends AbstractModule {
+public class AutomaticMerger implements LifecycleListener {
 
   @Override
-  protected void configure() {
-    DynamicSet.bind(binder(), LifecycleListener.class).to(AutomaticMerger.class);
+  public void start() {
+    // TODO(cupcicm): Add the change listener here.
+  }
+
+  @Override
+  public void stop() {
   }
 }
