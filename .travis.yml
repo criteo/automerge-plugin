@@ -32,14 +32,23 @@ install:
   - travis_retry tools/download_all.py > download.log
 
 script:
-  - ../buck/bin/buck build gerrit > buck.log
-  - ../buck/bin/buck build plugins/automerge-plugin:automerge-plugin >> buck.log
+  - buck build gerrit > buck.log
+  - buck build plugins/automerge-plugin:automerge-plugin >> buck.log
+
+after_failure:
+  - cat buck.log
+
+before_deploy:
+  - cd $TRAVIS_BUILD_DIR
+  - git fetch --tags
 
 deploy:
   provider: releases
+  skip_cleanup: true
   api_key:
     secure: Hze64QC7F5SSOVoufSIPtRWb+t6Pzzvx2kJgLtPJYUj87CKOXYzVHVqHuWsa50DPfed9knDnm5nOJawZAxleXG5VxSvBERvSyUNhjNUbDkKson1/TcCl12YM5FcyM2ocsLYe/mc59V3h9LZR2mHDqVj/incxwAIxV/MJIgu5PBg=
-  file: buck-out/gen/plugins/automerge-plugin/automerge-plugin.jar
+  file: ../../build/gerrit/buck-out/gen/plugins/automerge-plugin/automerge-plugin.jar
   on:
     repo: criteo/automerge-plugin
     tags: true
+    all_branches: true
