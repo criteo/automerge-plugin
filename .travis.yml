@@ -33,4 +33,4 @@ install:
 
 script:
   - ../buck/bin/buck build gerrit > buck.log
-
+  - ../buck/bin/buck build plugins/automerge-plugin:automerge-plugin >> buck.log
