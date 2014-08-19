@@ -14,20 +14,38 @@
 
 package com.criteo.gerrit.plugins.automerge;
 
+import com.google.gerrit.common.ChangeListener;
 import com.google.gerrit.extensions.events.LifecycleListener;
+import com.google.gerrit.server.events.ChangeEvent;
+
+import org.eclipse.jgit.lib.Config;
+
+import com.google.gerrit.server.config.GerritServerConfig;
+import com.google.inject.Inject;
 
 /**
  * Starts at the same time as the gerrit server, and sets up our
  * change hook listener.
  */
-public class AutomaticMerger implements LifecycleListener {
+public class AutomaticMerger implements ChangeListener, LifecycleListener {
+
+  private final AutomergeConfig config;
+
+  @Inject
+  public AutomaticMerger(@GerritServerConfig Config gerritConfig){
+    this.config = new AutomergeConfig(gerritConfig);
+  }
 
   @Override
   public void start() {
-    // TODO(cupcicm): Add the change listener here.
   }
 
   @Override
   public void stop() {
+  }
+
+  @Override
+  synchronized public void onChangeEvent(ChangeEvent event) {
+
   }
 }
