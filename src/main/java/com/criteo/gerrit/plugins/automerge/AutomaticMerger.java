@@ -121,11 +121,9 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
         if (atomicityHelper.isAtomicReview(change)) {
           if (atomicityHelper.hasDependentReview(reviewNumber)) {
-            reviewUpdater.setMinusTwo(reviewNumber,
-                config.getCommentFromFile(AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE));
+            reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
           } else {
-            reviewUpdater.commentOnReview(reviewNumber,
-                config.getCommentFromFile(AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE));
+            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
           }
         }
       }
@@ -141,11 +139,9 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
         }
         if (atomicityHelper.isAtomicReview(change)) {
           if (atomicityHelper.hasDependentReview(reviewNumber)) {
-            reviewUpdater.setMinusTwo(reviewNumber,
-                config.getCommentFromFile(AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE));
+            reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
           } else {
-            reviewUpdater.commentOnReview(reviewNumber,
-                config.getCommentFromFile(AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE));
+            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
           }
         }
       }
@@ -206,8 +202,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
             }
           } else {
             if (why != null) {
-              reviewUpdater.commentOnReview(reviewNumber,
-                  config.getCommentFromFile(AutomergeConfig.CANT_MERGE_COMMENT_FILE));
+              reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
             }
           }
         }

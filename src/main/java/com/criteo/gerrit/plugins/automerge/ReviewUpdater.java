@@ -49,10 +49,10 @@ public class ReviewUpdater {
     this.config = config;
   }
 
-  public void commentOnReview(final int number, final String comment) throws NoSuchChangeException, OrmException,
-      AuthException, BadRequestException, UnprocessableEntityException, IOException {
+  public void commentOnReview(final int number, final String commentTemplate) throws NoSuchChangeException,
+      OrmException, AuthException, BadRequestException, UnprocessableEntityException, IOException {
     final ReviewInput message = new ReviewInput();
-    message.message = comment;
+    message.message = config.getCommentFromFile(commentTemplate);
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
     final IdentifiedUser bot = factory.create(ids.iterator().next());
     final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
@@ -62,10 +62,10 @@ public class ReviewUpdater {
     reviewer.get().apply(r, message);
   }
 
-  public void setMinusTwo(final int number, final String comment) throws NoSuchChangeException, OrmException,
+  public void setMinusTwo(final int number, final String commentTemplate) throws NoSuchChangeException, OrmException,
       AuthException, BadRequestException, UnprocessableEntityException, IOException {
     final ReviewInput message = new ReviewInput();
-    message.message = comment;
+    message.message = config.getCommentFromFile(commentTemplate);
     message.label("Code-Review", -2);
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
     final IdentifiedUser bot = factory.create(ids.iterator().next());
