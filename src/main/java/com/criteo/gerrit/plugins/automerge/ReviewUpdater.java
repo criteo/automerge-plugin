@@ -68,8 +68,8 @@ public class ReviewUpdater {
     message.message = comment;
     message.label("Code-Review", -2);
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser qabot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), qabot);
+    final IdentifiedUser bot = factory.create(ids.iterator().next());
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
 
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
