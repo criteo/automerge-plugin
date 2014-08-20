@@ -35,7 +35,6 @@ import com.google.gerrit.server.change.GetRelated;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.RevisionResource;
 import com.google.gerrit.server.change.Submit;
-import com.google.gerrit.server.config.GerritServerConfig;
 import com.google.gerrit.server.data.ChangeAttribute;
 import com.google.gerrit.server.events.ChangeEvent;
 import com.google.gerrit.server.events.CommentAddedEvent;
@@ -50,7 +49,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
-import org.eclipse.jgit.lib.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.EnumSet;
@@ -63,9 +63,13 @@ import java.util.Set;
  */
 public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
+  private final static Logger log = LoggerFactory.getLogger(AutomaticMerger.class);
+
   @Inject
   private GerritApi api;
-  private final AtomicityHelper atomicityHelper;
+
+  @Inject
+  private AtomicityHelper atomicityHelper;
 
   @Inject
   private AccountByEmailCache byEmailCache;
@@ -79,7 +83,8 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   @Inject
   private ChangesCollection collection;
 
-  private final AutomergeConfig config;
+  @Inject
+  private AutomergeConfig config;
 
   @Inject
   Provider<ReviewDb> db;
@@ -95,24 +100,22 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
   @Inject
   Provider<PostReview> reviewer;
-  private final ReviewUpdater reviewUpdater;
+
+  @Inject
+  private ReviewUpdater reviewUpdater;
+
   @Inject
   Submit submitter;
 
-  @Inject
-  public AutomaticMerger(@GerritServerConfig final Config gerritConfig) {
-    config = new AutomergeConfig(gerritConfig);
-    reviewUpdater = new ReviewUpdater(config);
-    atomicityHelper = new AtomicityHelper(config);
-  }
-
   @Override
   synchronized public void onChangeEvent(final ChangeEvent event) {
+    log.info("A change has been recieved");
     try {
       if (event instanceof TopicChangedEvent) {
         final TopicChangedEvent newComment = (TopicChangedEvent) event;
         final ChangeAttribute change = newComment.change;
         final int reviewNumber = Integer.parseInt(change.number);
+        log.info(String.format("Change on review %d is a topic change.", reviewNumber));
         try {
           api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
         } catch (final RestApiException e1) {
@@ -121,8 +124,11 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
         if (atomicityHelper.isAtomicReview(change)) {
           if (atomicityHelper.hasDependentReview(reviewNumber)) {
+            log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
+                reviewNumber));
             reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
           } else {
+            log.info(String.format("Detected atomic review on change %d", reviewNumber));
             reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
           }
         }
@@ -167,6 +173,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
       final String topic = change.topic;
       try {
         if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
+          log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
           final List<ChangeInfo> related = Lists.newArrayList();
           if (topic != null) {
             related.addAll(api.changes().query("status: open AND topic: " + topic)
@@ -189,6 +196,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
             }
           }
           if (mergeable) {
+            log.debug(String.format("Change %d is mergeable", reviewNumber));
             for (final ChangeInfo info : related) {
               final SubmitInput input = new SubmitInput();
               input.waitForMerge = true;
@@ -228,6 +236,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
   @Override
   public void start() {
+    log.info("Starting automatic merger plugin.");
   }
 
   @Override

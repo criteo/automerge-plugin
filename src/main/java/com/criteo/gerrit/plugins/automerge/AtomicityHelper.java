@@ -21,11 +21,16 @@ import com.google.gwtorm.server.OrmException;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
 public class AtomicityHelper {
+
+  private final static Logger log = LoggerFactory.getLogger(AtomicityHelper.class);
 
   @Inject
   private AccountByEmailCache byEmailCache;
@@ -39,6 +44,7 @@ public class AtomicityHelper {
   @Inject
   private ChangesCollection collection;
 
+  @Inject
   AutomergeConfig config;
 
   @Inject
@@ -59,10 +65,6 @@ public class AtomicityHelper {
   @Inject
   Submit submitter;
 
-  public AtomicityHelper(final AutomergeConfig config) {
-    this.config = config;
-  }
-
   /**
    * Check if the current patchset of the specified change has dependent
    * unmerged changes.
@@ -78,10 +80,9 @@ public class AtomicityHelper {
     final IdentifiedUser bot = factory.create(ids.iterator().next());
     final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     final RelatedInfo related = getRelated.apply(r);
-
+    log.debug(String.format("Checking for related changes on review %d", number));
     return related.changes.size() > 0;
   }
 
@@ -93,7 +94,9 @@ public class AtomicityHelper {
    * @return true or false
    */
   public boolean isAtomicReview(final ChangeAttribute change) {
-    return change.topic != null && change.topic.startsWith(config.getTopicPrefix());
+    final boolean atomic = change.topic != null && change.topic.startsWith(config.getTopicPrefix());
+    log.debug(String.format("Checking if change %s is an atomic change: %b", change.number, atomic));
+    return atomic;
   }
 
   /**
@@ -106,12 +109,14 @@ public class AtomicityHelper {
   public boolean isSubmittable(final int change) throws OrmException {
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(change));
     final List<SubmitRecord> cansubmit = changeData.changeControl().canSubmit(db.get(), changeData.currentPatchSet());
-
+    log.debug(String.format("Checking if change %d is submitable.", change));
     for (final SubmitRecord submit : cansubmit) {
       if (submit.status != SubmitRecord.Status.OK) {
+        log.debug(String.format("Change %d is not submitable", change));
         return false;
       }
     }
+    log.debug(String.format("Change %d is submitable", change));
     return true;
   }
 }

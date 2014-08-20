@@ -4,7 +4,6 @@ import com.google.gerrit.server.config.GerritServerConfig;
 import com.google.gerrit.server.config.SitePaths;
 import com.google.inject.Inject;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.lib.Config;
 
 import java.io.File;
@@ -25,28 +24,31 @@ public class AutomergeConfig {
 
   public static final String getDefaultBotEmail() {
     return defaultBotEmail;
-
   }
 
   public static final String getDefaultTopicPrefix() {
     return defaultTopicPrefix;
   }
 
-  private final Config config;
+  private String botEmail;
+  private final File templatesPath;
+  private String topicPrefix;
 
   @Inject
-  private SitePaths sitePaths;
+  public AutomergeConfig(@GerritServerConfig final Config config, final SitePaths paths) {
+    botEmail = config.getString(AUTOMERGE_SECTION, null, BOT_EMAIL_KEY);
+    if (botEmail == null) {
+      botEmail = defaultBotEmail;
+    }
+    topicPrefix = config.getString(AUTOMERGE_SECTION, null, TOPIC_PREFIX_KEY);
+    if (topicPrefix == null) {
+      topicPrefix = defaultTopicPrefix;
+    }
 
-
-  public AutomergeConfig(@GerritServerConfig final Config config) {
-    this.config = config;
+    templatesPath = paths.etc_dir;
   }
 
   public final String getBotEmail() {
-    final String botEmail = config.getString(AUTOMERGE_SECTION, null, BOT_EMAIL_KEY);
-    if (botEmail == null) {
-      return defaultBotEmail;
-    }
     return botEmail;
   }
 
@@ -57,21 +59,11 @@ public class AutomergeConfig {
    * @return a string containing a comment.
    * @throws IOException
    */
-  public final String getCommentFromFile(final String filename) {
-    final File commentFile = new File(sitePaths.etc_dir, filename);
-    try {
-      return FileUtils.readFileToString(commentFile);
-    } catch (final IOException exc) {
-      return String.format("Cannot find %s file in gerrit etc dir. Please check your gerrit configuration", filename);
-    }
+  public final String getTemplatesPath() {
+    return templatesPath.getPath();
   }
 
   public final String getTopicPrefix() {
-    final String topicPrefix = config.getString(AUTOMERGE_SECTION, null, TOPIC_PREFIX_KEY);
-    if (topicPrefix == null) {
-      return defaultTopicPrefix;
-    }
     return topicPrefix;
   }
-
 }
