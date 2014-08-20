@@ -21,7 +21,7 @@ install:
   - cd ../..
   - mkdir -p build
   - cd build
-  - git clone --depth=1 --branch=master https://gerrit.googlesource.com/buck
+  - git clone https://gerrit.googlesource.com/buck
   - cd buck
   - ant
   - export PATH=$PATH:$TRAVIS_BUILD_DIR/../../build/buck/bin
