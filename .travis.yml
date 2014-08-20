@@ -21,12 +21,12 @@ install:
   - cd ../..
   - mkdir -p build
   - cd build
-  - git clone https://gerrit.googlesource.com/buck
+  - git clone --depth=1 --branch=master https://gerrit.googlesource.com/buck
   - cd buck
   - ant
   - export PATH=$PATH:$TRAVIS_BUILD_DIR/../../build/buck/bin
   - cd ..
-  - git clone https://gerrit.googlesource.com/gerrit
+  - git clone --depth=1 --branch=master https://gerrit.googlesource.com/gerrit
   - cd gerrit
   - ln -s $TRAVIS_BUILD_DIR plugins
   - travis_retry tools/download_all.py > download.log
