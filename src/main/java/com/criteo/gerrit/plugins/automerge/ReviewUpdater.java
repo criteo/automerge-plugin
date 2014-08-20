@@ -56,7 +56,7 @@ public class ReviewUpdater {
   Provider<PostReview> reviewer;
 
   public void commentOnReview(final int number, final String commentTemplate) throws NoSuchChangeException,
-      OrmException, AuthException, BadRequestException, UnprocessableEntityException, IOException {
+  OrmException, AuthException, BadRequestException, UnprocessableEntityException, IOException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
@@ -81,7 +81,7 @@ public class ReviewUpdater {
   }
 
   public void setMinusTwo(final int number, final String commentTemplate) throws NoSuchChangeException, OrmException,
-      AuthException, BadRequestException, UnprocessableEntityException, IOException {
+  AuthException, BadRequestException, UnprocessableEntityException, IOException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     message.label("Code-Review", -2);
