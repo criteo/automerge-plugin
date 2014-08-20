@@ -48,7 +48,6 @@ import com.google.gwtorm.server.OrmException;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,71 +106,31 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   @Inject
   Submit submitter;
 
+
   @Override
   synchronized public void onChangeEvent(final ChangeEvent event) {
-    log.info("A change has been recieved");
-    try {
-      if (event instanceof TopicChangedEvent) {
-        final TopicChangedEvent newComment = (TopicChangedEvent) event;
-        final ChangeAttribute change = newComment.change;
-        final int reviewNumber = Integer.parseInt(change.number);
-        log.info(String.format("Change on review %d is a topic change.", reviewNumber));
-        try {
-          api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-        } catch (final RestApiException e1) {
-          throw new RuntimeException(e1);
-        }
-
-        if (atomicityHelper.isAtomicReview(change)) {
-          if (atomicityHelper.hasDependentReview(reviewNumber)) {
-            log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
-                reviewNumber));
-            reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
-          } else {
-            log.info(String.format("Detected atomic review on change %d", reviewNumber));
-            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
-          }
-        }
-      }
-      if (event instanceof PatchSetCreatedEvent) {
-        final PatchSetCreatedEvent newComment = (PatchSetCreatedEvent) event;
-
-        final ChangeAttribute change = newComment.change;
-        final int reviewNumber = Integer.parseInt(change.number);
-        try {
-          api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-        } catch (final RestApiException e1) {
-          throw new RuntimeException(e1);
-        }
-        if (atomicityHelper.isAtomicReview(change)) {
-          if (atomicityHelper.hasDependentReview(reviewNumber)) {
-            reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
-          } else {
-            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
-          }
-        }
-      }
-
-
-    } catch (NoSuchChangeException | OrmException | IOException | AuthException | BadRequestException
-        | UnprocessableEntityException e) {
-      throw new RuntimeException(e);
+    if (event instanceof TopicChangedEvent) {
+      final TopicChangedEvent newComment = (TopicChangedEvent) event;
+      final ChangeAttribute change = newComment.change;
+      processAtomicChange(change);
     }
+    if (event instanceof PatchSetCreatedEvent) {
+      final PatchSetCreatedEvent newComment = (PatchSetCreatedEvent) event;
+      final ChangeAttribute change = newComment.change;
+      Integer.parseInt(change.number);
+      processAtomicChange(change);
+    }
+
     if (event instanceof CommentAddedEvent) {
       final CommentAddedEvent newComment = (CommentAddedEvent) event;
       final ChangeAttribute change = newComment.change;
       final int reviewNumber = Integer.parseInt(change.number);
       try {
         api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-      } catch (final RestApiException e1) {
-        throw new RuntimeException(e1);
-      }
-
-      if (newComment.author.email.contains("qabot")) {
-        return;
-      }
-      final String topic = change.topic;
-      try {
+        if (newComment.author.email == config.getBotEmail()) {
+          return;
+        }
+        final String topic = change.topic;
         if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
           log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
           final List<ChangeInfo> related = Lists.newArrayList();
@@ -214,24 +173,38 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
             }
           }
         }
-      } catch (final RestApiException e) {
+      } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
+        log.error("An exception occured while trying to atomic merge a change.", e);
         throw new RuntimeException(e);
-      } catch (final OrmException e) {
-        throw new RuntimeException(e);
-      } catch (final NumberFormatException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (final NoSuchChangeException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (final RepositoryNotFoundException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (final IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
       }
     }
+  }
+
+  private void processAtomicChange(final ChangeAttribute change) {
+    final int reviewNumber = Integer.parseInt(change.number);
+    log.info(String.format("Change on review %d is a topic change.", reviewNumber));
+    try {
+      api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
+    } catch (final RestApiException e1) {
+      throw new RuntimeException(e1);
+    }
+
+    if (atomicityHelper.isAtomicReview(change)) {
+      try {
+        if (atomicityHelper.hasDependentReview(reviewNumber)) {
+          log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
+              reviewNumber));
+          reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
+        } else {
+          log.info(String.format("Detected atomic review on change %d.", reviewNumber));
+          reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
+        }
+      } catch (AuthException | BadRequestException | UnprocessableEntityException | IOException | NoSuchChangeException
+          | OrmException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
   }
 
   @Override

@@ -14,31 +14,16 @@
 
 package com.criteo.gerrit.plugins.automerge;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.gerrit.common.ChangeListener;
 import com.google.gerrit.extensions.registration.DynamicSet;
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 
 /**
  * Main automerge Guice module.
  *
  * Configures how all classes in the plugin are instantiated via Guice.
  */
-public class Module extends AbstractModule {
-
-  protected static final Supplier<Injector> injector = Suppliers.memoize(new Supplier<Injector>() {
-    @Override
-    public Injector get() {
-      return Guice.createInjector(new Module());
-    }
-  });
-
-  public static <T> T getInstance(final Class<T> type) {
-    return injector.get().getInstance(type);
-  }
+public class AutomergeModule extends AbstractModule {
 
   @Override
   protected void configure() {

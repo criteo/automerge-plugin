@@ -19,7 +19,7 @@ gerrit_plugin(
   srcs = glob(['src/main/java/**/*.java']),
   manifest_entries = [
     'Gerrit-PluginName: automerge',
-    'Gerrit-Module: com.criteo.gerrit.plugins.automerge.Module',
+    'Gerrit-Module: com.criteo.gerrit.plugins.automerge.AutomergeModule',
     'Implementation-Title: Automerge plugin',
     'Implementation-URL: https://github.com/criteo/automerge-plugin'
   ]
