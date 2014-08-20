@@ -26,7 +26,7 @@ install:
   - ant
   - export PATH=$PATH:$TRAVIS_BUILD_DIR/../../build/buck/bin
   - cd ..
-  - git clone --depth=1 --branch=master https://gerrit.googlesource.com/gerrit
+  - git clone --branch=master https://gerrit.googlesource.com/gerrit
   - cd gerrit
   - ln -s $TRAVIS_BUILD_DIR plugins
   - travis_retry tools/download_all.py > download.log
