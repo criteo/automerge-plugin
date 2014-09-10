@@ -152,17 +152,15 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
           related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
         }
         boolean mergeable = true;
-        String why = null;
+        boolean approvedButNotMergeable = false;
         for (final ChangeInfo info : related) {
           api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
           if (!info.mergeable) {
             mergeable = false;
-            why = String.format("Review %s is approved but not mergeable.", info._number);
+            approvedButNotMergeable = true;
           }
           if (!atomicityHelper.isSubmittable(info._number)) {
             mergeable = false;
-            // why = String.format("Review %s is not approved.",
-            // info._number);
           }
         }
         if (mergeable) {
@@ -179,7 +177,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
             submitter.apply(r, input);
           }
         } else {
-          if (why != null) {
+          if (approvedButNotMergeable) {
             reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
           }
         }
