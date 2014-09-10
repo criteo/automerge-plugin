@@ -1,6 +1,9 @@
 package com.criteo.gerrit.plugins.automerge;
 
 import com.google.gerrit.common.data.SubmitRecord;
+import com.google.gerrit.extensions.api.changes.SubmitInput;
+import com.google.gerrit.extensions.common.ChangeInfo;
+import com.google.gerrit.extensions.restapi.RestApiException;
 import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.server.ReviewDb;
@@ -76,11 +79,7 @@ public class AtomicityHelper {
    * @throws OrmException
    */
   public boolean hasDependentReview(final int number) throws IOException, NoSuchChangeException, OrmException {
-    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser bot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    final RevisionResource r = getRevisionResource(number);
     final RelatedInfo related = getRelated.apply(r);
     log.debug(String.format("Checking for related changes on review %d", number));
     return related.changes.size() > 0;
@@ -118,5 +117,37 @@ public class AtomicityHelper {
     }
     log.debug(String.format("Change %d is submitable", change));
     return true;
+  }
+
+  /**
+   * Merge a review.
+   *
+   * @param info
+   * @throws RestApiException
+   * @throws NoSuchChangeException
+   * @throws OrmException
+   * @throws IOException
+   */
+  public void mergeReview(ChangeInfo info) throws RestApiException, NoSuchChangeException, OrmException, IOException {
+    final SubmitInput input = new SubmitInput();
+    input.waitForMerge = true;
+    final RevisionResource r = getRevisionResource(info._number);
+    submitter.apply(r, input);
+  }
+
+  public RevisionResource getRevisionResource(int changeNumber) throws NoSuchChangeException, OrmException {
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(changeNumber), getBotUser());
+    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(changeNumber));
+    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    return r;
+  }
+
+  private IdentifiedUser getBotUser() {
+    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
+    if (ids.isEmpty()) {
+      throw new RuntimeException("No user found with email: " + config.getBotEmail());
+    }
+    final IdentifiedUser bot = factory.create(ids.iterator().next());
+    return bot;
   }
 }
