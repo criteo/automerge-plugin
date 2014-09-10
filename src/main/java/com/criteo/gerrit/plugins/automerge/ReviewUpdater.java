@@ -38,8 +38,7 @@ public class ReviewUpdater {
   private AtomicityHelper atomicityHelper;
 
   public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
-    final ReviewInput message = new ReviewInput();
-    message.message = getCommentFromFile(commentTemplate);
+    final ReviewInput message = createCrossrepoComment(commentTemplate);
     final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, message);
   }
@@ -57,11 +56,15 @@ public class ReviewUpdater {
   }
 
   public void setMinusTwo(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
-    final ReviewInput message = new ReviewInput();
-    message.message = getCommentFromFile(commentTemplate);
+    final ReviewInput message = createCrossrepoComment(commentTemplate);
     message.label("Code-Review", -2);
     final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, message);
   }
 
+  private ReviewInput createCrossrepoComment(final String commentTemplate) {
+    final ReviewInput message = new ReviewInput();
+    message.message = config.getCommentPrefix() + " " + getCommentFromFile(commentTemplate);
+    return message;
+  }
 }

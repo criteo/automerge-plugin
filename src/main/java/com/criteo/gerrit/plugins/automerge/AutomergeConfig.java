@@ -21,6 +21,8 @@ public class AutomergeConfig {
   private final static String defaultBotEmail = "qabot@criteo.com";
   private final static String defaultTopicPrefix = "crossrepo/";
   public final static String TOPIC_PREFIX_KEY = "topicPrefix";
+  private final static String defaultCommentPrefix = "[crossrepo]";
+  public final static String COMMENT_PREFIX_KEY = "commitPrefix";
 
   public static final String getDefaultBotEmail() {
     return defaultBotEmail;
@@ -33,6 +35,7 @@ public class AutomergeConfig {
   private String botEmail;
   private final File templatesPath;
   private String topicPrefix;
+  private String commentPrefix;
 
   @Inject
   public AutomergeConfig(@GerritServerConfig final Config config, final SitePaths paths) {
@@ -43,6 +46,10 @@ public class AutomergeConfig {
     topicPrefix = config.getString(AUTOMERGE_SECTION, null, TOPIC_PREFIX_KEY);
     if (topicPrefix == null) {
       topicPrefix = defaultTopicPrefix;
+    }
+    commentPrefix = config.getString(AUTOMERGE_SECTION, null, COMMENT_PREFIX_KEY);
+    if (commentPrefix == null) {
+      commentPrefix = defaultCommentPrefix;
     }
 
     templatesPath = paths.etc_dir;
@@ -65,5 +72,9 @@ public class AutomergeConfig {
 
   public final String getTopicPrefix() {
     return topicPrefix;
+  }
+
+  public String getCommentPrefix() {
+    return commentPrefix;
   }
 }
