@@ -120,11 +120,17 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   }
 
   private void onTopicChanged(final TopicChangedEvent event) {
-    processAtomicChange(event.change);
+    if (!atomicityHelper.isAtomicReview(event.change)) {
+      return;
+    }
+    processNewAtomicPatchSet(event.change);
   }
 
   private void onPatchSetCreated(final PatchSetCreatedEvent event) {
-    processAtomicChange(event.change);
+    if (!atomicityHelper.isAtomicReview(event.change)) {
+      return;
+    }
+    processNewAtomicPatchSet(event.change);
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
@@ -184,7 +190,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     }
   }
 
-  private void processAtomicChange(final ChangeAttribute change) {
+  private void processNewAtomicPatchSet(final ChangeAttribute change) {
     final int reviewNumber = Integer.parseInt(change.number);
     log.info(String.format("Change on review %d is a topic change.", reviewNumber));
     try {
@@ -192,21 +198,18 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     } catch (final RestApiException e1) {
       throw new RuntimeException(e1);
     }
-
-    if (atomicityHelper.isAtomicReview(change)) {
-      try {
-        if (atomicityHelper.hasDependentReview(reviewNumber)) {
-          log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
-              reviewNumber));
-          reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
-        } else {
-          log.info(String.format("Detected atomic review on change %d.", reviewNumber));
-          reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
-        }
-      } catch (AuthException | BadRequestException | UnprocessableEntityException | IOException | NoSuchChangeException
-          | OrmException e) {
-        throw new RuntimeException(e);
+    try {
+      if (atomicityHelper.hasDependentReview(reviewNumber)) {
+        log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
+            reviewNumber));
+        reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
+      } else {
+        log.info(String.format("Detected atomic review on change %d.", reviewNumber));
+        reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
       }
+    } catch (AuthException | BadRequestException | UnprocessableEntityException | IOException | NoSuchChangeException
+        | OrmException e) {
+      throw new RuntimeException(e);
     }
   }
 
