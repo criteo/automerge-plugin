@@ -134,49 +134,55 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
+    if (newComment.author.email == config.getBotEmail()) {
+      return;
+    }
+
     final ChangeAttribute change = newComment.change;
     final int reviewNumber = Integer.parseInt(change.number);
     try {
       checkReviewExists(reviewNumber);
-      if (newComment.author.email == config.getBotEmail()) {
-        return;
-      }
-      if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
+      if (atomicityHelper.isSubmittable(reviewNumber)) {
         log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
-        final List<ChangeInfo> related = Lists.newArrayList();
-        final String topic = change.topic;
-        if (topic != null) {
-          related.addAll(api.changes().query("status: open AND topic: " + topic)
-              .withOption(ListChangesOption.CURRENT_REVISION).get());
-        } else {
-          related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
-        }
-        boolean mergeable = true;
-        boolean approvedButNotMergeable = false;
-        for (final ChangeInfo info : related) {
-          api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-          if (!info.mergeable) {
-            mergeable = false;
-            approvedButNotMergeable = true;
-          }
-          if (!atomicityHelper.isSubmittable(info._number)) {
-            mergeable = false;
-          }
-        }
-        if (mergeable) {
-          log.debug(String.format("Change %d is mergeable", reviewNumber));
-          for (final ChangeInfo info : related) {
-            atomicityHelper.mergeReview(info);
-          }
-        } else {
-          if (approvedButNotMergeable) {
-            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
-          }
-        }
+        attemptToMerge(change);
       }
     } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
       log.error("An exception occured while trying to atomic merge a change.", e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException {
+    final List<ChangeInfo> related = Lists.newArrayList();
+    final String topic = change.topic;
+    if (topic != null) {
+      related.addAll(api.changes().query("status: open AND topic: " + topic)
+          .withOption(ListChangesOption.CURRENT_REVISION).get());
+    } else {
+      related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
+    }
+    boolean mergeable = true;
+    boolean approvedButNotMergeable = false;
+    for (final ChangeInfo info : related) {
+      api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
+      if (!info.mergeable) {
+        mergeable = false;
+        approvedButNotMergeable = true;
+      }
+      if (!atomicityHelper.isSubmittable(info._number)) {
+        mergeable = false;
+      }
+    }
+    final int reviewNumber = Integer.parseInt(change.number);
+    if (mergeable) {
+      log.debug(String.format("Change %d is mergeable", reviewNumber));
+      for (final ChangeInfo info : related) {
+        atomicityHelper.mergeReview(info);
+      }
+    } else {
+      if (approvedButNotMergeable) {
+        reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
+      }
     }
   }
 
