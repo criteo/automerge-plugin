@@ -106,77 +106,81 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   @Inject
   Submit submitter;
 
-
   @Override
   synchronized public void onChangeEvent(final ChangeEvent event) {
     if (event instanceof TopicChangedEvent) {
-      final TopicChangedEvent newComment = (TopicChangedEvent) event;
-      final ChangeAttribute change = newComment.change;
-      processAtomicChange(change);
+      onTopicChanged((TopicChangedEvent)event);
     }
-    if (event instanceof PatchSetCreatedEvent) {
-      final PatchSetCreatedEvent newComment = (PatchSetCreatedEvent) event;
-      final ChangeAttribute change = newComment.change;
-      Integer.parseInt(change.number);
-      processAtomicChange(change);
+    else if (event instanceof PatchSetCreatedEvent) {
+      onPatchSetCreated((PatchSetCreatedEvent)event);
     }
+    else if (event instanceof CommentAddedEvent) {
+      onCommendAdded((CommentAddedEvent)event);
+    }
+  }
 
-    if (event instanceof CommentAddedEvent) {
-      final CommentAddedEvent newComment = (CommentAddedEvent) event;
-      final ChangeAttribute change = newComment.change;
-      final int reviewNumber = Integer.parseInt(change.number);
-      try {
-        api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-        if (newComment.author.email == config.getBotEmail()) {
-          return;
-        }
-        final String topic = change.topic;
-        if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
-          log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
-          final List<ChangeInfo> related = Lists.newArrayList();
-          if (topic != null) {
-            related.addAll(api.changes().query("status: open AND topic: " + topic)
-                .withOption(ListChangesOption.CURRENT_REVISION).get());
-          } else {
-            related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
-          }
-          boolean mergeable = true;
-          String why = null;
-          for (final ChangeInfo info : related) {
-            api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-            if (!info.mergeable) {
-              mergeable = false;
-              why = String.format("Review %s is approved but not mergeable.", info._number);
-            }
-            if (!atomicityHelper.isSubmittable(info._number)) {
-              mergeable = false;
-              // why = String.format("Review %s is not approved.",
-              // info._number);
-            }
-          }
-          if (mergeable) {
-            log.debug(String.format("Change %d is mergeable", reviewNumber));
-            for (final ChangeInfo info : related) {
-              final SubmitInput input = new SubmitInput();
-              input.waitForMerge = true;
-              final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-              final IdentifiedUser bot = factory.create(ids.iterator().next());
-              final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), bot);
-              final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
+  private void onTopicChanged(final TopicChangedEvent event) {
+    processAtomicChange(event.change);
+  }
 
-              final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
-              submitter.apply(r, input);
-            }
-          } else {
-            if (why != null) {
-              reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
-            }
-          }
-        }
-      } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
-        log.error("An exception occured while trying to atomic merge a change.", e);
-        throw new RuntimeException(e);
+  private void onPatchSetCreated(final PatchSetCreatedEvent event) {
+    processAtomicChange(event.change);
+  }
+
+  private void onCommendAdded(final CommentAddedEvent newComment) {
+    final ChangeAttribute change = newComment.change;
+    final int reviewNumber = Integer.parseInt(change.number);
+    try {
+      api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
+      if (newComment.author.email == config.getBotEmail()) {
+        return;
       }
+      final String topic = change.topic;
+      if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
+        log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
+        final List<ChangeInfo> related = Lists.newArrayList();
+        if (topic != null) {
+          related.addAll(api.changes().query("status: open AND topic: " + topic)
+              .withOption(ListChangesOption.CURRENT_REVISION).get());
+        } else {
+          related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
+        }
+        boolean mergeable = true;
+        String why = null;
+        for (final ChangeInfo info : related) {
+          api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
+          if (!info.mergeable) {
+            mergeable = false;
+            why = String.format("Review %s is approved but not mergeable.", info._number);
+          }
+          if (!atomicityHelper.isSubmittable(info._number)) {
+            mergeable = false;
+            // why = String.format("Review %s is not approved.",
+            // info._number);
+          }
+        }
+        if (mergeable) {
+          log.debug(String.format("Change %d is mergeable", reviewNumber));
+          for (final ChangeInfo info : related) {
+            final SubmitInput input = new SubmitInput();
+            input.waitForMerge = true;
+            final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
+            final IdentifiedUser bot = factory.create(ids.iterator().next());
+            final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), bot);
+            final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
+
+            final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+            submitter.apply(r, input);
+          }
+        } else {
+          if (why != null) {
+            reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
+          }
+        }
+      }
+    } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
+      log.error("An exception occured while trying to atomic merge a change.", e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -204,7 +208,6 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
         throw new RuntimeException(e);
       }
     }
-
   }
 
   @Override
