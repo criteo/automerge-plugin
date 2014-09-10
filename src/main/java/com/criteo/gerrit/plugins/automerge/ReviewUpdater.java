@@ -55,9 +55,9 @@ public class ReviewUpdater {
     }
   }
 
-  public void setMinusTwo(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
+  public void setMinusOne(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
     final ReviewInput message = createCrossrepoComment(commentTemplate);
-    message.label("Code-Review", -2);
+    message.label("Code-Review", -1);
     final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, message);
   }

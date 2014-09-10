@@ -168,9 +168,9 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     try {
       checkReviewExists(reviewNumber);
       if (atomicityHelper.hasDependentReview(reviewNumber)) {
-        log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
+        log.info(String.format("Warn the user by setting -1 on change %d, as other atomic changes exists on the same repository.",
             reviewNumber));
-        reviewUpdater.setMinusTwo(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
+        reviewUpdater.setMinusOne(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
       } else {
         log.info(String.format("Detected atomic review on change %d.", reviewNumber));
         reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
