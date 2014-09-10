@@ -166,15 +166,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
         if (mergeable) {
           log.debug(String.format("Change %d is mergeable", reviewNumber));
           for (final ChangeInfo info : related) {
-            final SubmitInput input = new SubmitInput();
-            input.waitForMerge = true;
-            final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-            final IdentifiedUser bot = factory.create(ids.iterator().next());
-            final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), bot);
-            final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
-
-            final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
-            submitter.apply(r, input);
+            atomicityHelper.mergeReview(info);
           }
         } else {
           if (approvedButNotMergeable) {

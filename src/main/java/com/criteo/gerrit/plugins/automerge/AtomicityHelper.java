@@ -1,6 +1,9 @@
 package com.criteo.gerrit.plugins.automerge;
 
 import com.google.gerrit.common.data.SubmitRecord;
+import com.google.gerrit.extensions.api.changes.SubmitInput;
+import com.google.gerrit.extensions.common.ChangeInfo;
+import com.google.gerrit.extensions.restapi.RestApiException;
 import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.server.ReviewDb;
@@ -118,5 +121,26 @@ public class AtomicityHelper {
     }
     log.debug(String.format("Change %d is submitable", change));
     return true;
+  }
+
+  /**
+   * Merge a review.
+   *
+   * @param info
+   * @throws RestApiException
+   * @throws NoSuchChangeException
+   * @throws OrmException
+   * @throws IOException
+   */
+  public void mergeReview(ChangeInfo info) throws RestApiException, NoSuchChangeException, OrmException, IOException {
+    final SubmitInput input = new SubmitInput();
+    input.waitForMerge = true;
+    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
+    final IdentifiedUser bot = factory.create(ids.iterator().next());
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), bot);
+    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
+    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+
+    submitter.apply(r, input);
   }
 }
