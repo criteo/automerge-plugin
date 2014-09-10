@@ -79,9 +79,7 @@ public class AtomicityHelper {
    * @throws OrmException
    */
   public boolean hasDependentReview(final int number) throws IOException, NoSuchChangeException, OrmException {
-    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser bot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), getBotUser());
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     final RelatedInfo related = getRelated.apply(r);
@@ -135,12 +133,19 @@ public class AtomicityHelper {
   public void mergeReview(ChangeInfo info) throws RestApiException, NoSuchChangeException, OrmException, IOException {
     final SubmitInput input = new SubmitInput();
     input.waitForMerge = true;
-    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser bot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), bot);
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), getBotUser());
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
 
     submitter.apply(r, input);
+  }
+
+  public IdentifiedUser getBotUser() {
+    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
+    if (ids.isEmpty()) {
+      throw new RuntimeException("No user found with email: " + config.getBotEmail());
+    }
+    final IdentifiedUser bot = factory.create(ids.iterator().next());
+    return bot;
   }
 }

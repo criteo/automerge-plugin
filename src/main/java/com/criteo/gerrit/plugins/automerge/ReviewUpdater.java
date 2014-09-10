@@ -56,14 +56,14 @@ public class ReviewUpdater {
   @Inject
   Provider<PostReview> reviewer;
 
+  @Inject
+  private AtomicityHelper atomicityHelper;
+
   public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
-    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser bot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), atomicityHelper.getBotUser());
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     reviewer.get().apply(r, message);
   }
@@ -84,11 +84,8 @@ public class ReviewUpdater {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     message.label("Code-Review", -2);
-    final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
-    final IdentifiedUser bot = factory.create(ids.iterator().next());
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), bot);
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), atomicityHelper.getBotUser());
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     reviewer.get().apply(r, message);
   }
