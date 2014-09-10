@@ -79,9 +79,7 @@ public class AtomicityHelper {
    * @throws OrmException
    */
   public boolean hasDependentReview(final int number) throws IOException, NoSuchChangeException, OrmException {
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), getBotUser());
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    final RevisionResource r = getRevisionResource(number);
     final RelatedInfo related = getRelated.apply(r);
     log.debug(String.format("Checking for related changes on review %d", number));
     return related.changes.size() > 0;
@@ -133,14 +131,18 @@ public class AtomicityHelper {
   public void mergeReview(ChangeInfo info) throws RestApiException, NoSuchChangeException, OrmException, IOException {
     final SubmitInput input = new SubmitInput();
     input.waitForMerge = true;
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(info._number), getBotUser());
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(info._number));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
-
+    final RevisionResource r = getRevisionResource(info._number);
     submitter.apply(r, input);
   }
 
-  public IdentifiedUser getBotUser() {
+  public RevisionResource getRevisionResource(int changeNumber) throws NoSuchChangeException, OrmException {
+    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(changeNumber), getBotUser());
+    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(changeNumber));
+    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    return r;
+  }
+
+  private IdentifiedUser getBotUser() {
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
     if (ids.isEmpty()) {
       throw new RuntimeException("No user found with email: " + config.getBotEmail());

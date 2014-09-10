@@ -4,12 +4,9 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gerrit.extensions.api.changes.ReviewInput;
 import com.google.gerrit.extensions.restapi.RestApiException;
-import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.server.ReviewDb;
-import com.google.gerrit.server.change.ChangesCollection;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.RevisionResource;
-import com.google.gerrit.server.project.ChangeControl;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
@@ -29,12 +26,6 @@ public class ReviewUpdater {
   ChangeData.Factory changeDataFactory;
 
   @Inject
-  private ChangeControl.GenericFactory changeFactory;
-
-  @Inject
-  private ChangesCollection collection;
-
-  @Inject
   AutomergeConfig config;
 
   @Inject
@@ -49,9 +40,7 @@ public class ReviewUpdater {
   public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), atomicityHelper.getBotUser());
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, message);
   }
 
@@ -71,9 +60,7 @@ public class ReviewUpdater {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     message.label("Code-Review", -2);
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(number), atomicityHelper.getBotUser());
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(number));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+    final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, message);
   }
 
