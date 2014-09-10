@@ -5,6 +5,7 @@ import com.google.common.io.Files;
 import com.google.gerrit.extensions.api.changes.ReviewInput;
 import com.google.gerrit.extensions.restapi.AuthException;
 import com.google.gerrit.extensions.restapi.BadRequestException;
+import com.google.gerrit.extensions.restapi.RestApiException;
 import com.google.gerrit.extensions.restapi.UnprocessableEntityException;
 import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
@@ -55,8 +56,7 @@ public class ReviewUpdater {
   @Inject
   Provider<PostReview> reviewer;
 
-  public void commentOnReview(final int number, final String commentTemplate) throws NoSuchChangeException,
-  OrmException, AuthException, BadRequestException, UnprocessableEntityException, IOException {
+  public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     final Set<Account.Id> ids = byEmailCache.get(config.getBotEmail());
@@ -80,8 +80,7 @@ public class ReviewUpdater {
     }
   }
 
-  public void setMinusTwo(final int number, final String commentTemplate) throws NoSuchChangeException, OrmException,
-  AuthException, BadRequestException, UnprocessableEntityException, IOException {
+  public void setMinusTwo(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
     final ReviewInput message = new ReviewInput();
     message.message = getCommentFromFile(commentTemplate);
     message.label("Code-Review", -2);

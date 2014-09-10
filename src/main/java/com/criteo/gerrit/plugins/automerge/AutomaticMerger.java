@@ -137,14 +137,14 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     final ChangeAttribute change = newComment.change;
     final int reviewNumber = Integer.parseInt(change.number);
     try {
-      api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
+      checkReviewExists(reviewNumber);
       if (newComment.author.email == config.getBotEmail()) {
         return;
       }
-      final String topic = change.topic;
       if (atomicityHelper.isSubmittable(Integer.parseInt(newComment.change.number))) {
         log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
         final List<ChangeInfo> related = Lists.newArrayList();
+        final String topic = change.topic;
         if (topic != null) {
           related.addAll(api.changes().query("status: open AND topic: " + topic)
               .withOption(ListChangesOption.CURRENT_REVISION).get());
@@ -183,11 +183,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   private void processNewAtomicPatchSet(final ChangeAttribute change) {
     final int reviewNumber = Integer.parseInt(change.number);
     try {
-      api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
-    } catch (final RestApiException e1) {
-      throw new RuntimeException(e1);
-    }
-    try {
+      checkReviewExists(reviewNumber);
       if (atomicityHelper.hasDependentReview(reviewNumber)) {
         log.info(String.format("Setting -2 on change %d, other atomic changes exists on the same repository.",
             reviewNumber));
@@ -196,10 +192,13 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
         log.info(String.format("Detected atomic review on change %d.", reviewNumber));
         reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
       }
-    } catch (AuthException | BadRequestException | UnprocessableEntityException | IOException | NoSuchChangeException
-        | OrmException e) {
+    } catch (RestApiException | IOException | NoSuchChangeException | OrmException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void checkReviewExists(int reviewNumber) throws RestApiException {
+    api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
   }
 
   @Override
