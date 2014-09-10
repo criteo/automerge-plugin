@@ -144,26 +144,26 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     } else {
       related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
     }
+    boolean submittable = true;
     boolean mergeable = true;
-    boolean approvedButNotMergeable = false;
     for (final ChangeInfo info : related) {
       api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
       if (!info.mergeable) {
         mergeable = false;
-        approvedButNotMergeable = true;
       }
       if (!atomicityHelper.isSubmittable(info._number)) {
-        mergeable = false;
+        submittable = false;
       }
     }
     final int reviewNumber = Integer.parseInt(change.number);
-    if (mergeable) {
-      log.debug(String.format("Change %d is mergeable", reviewNumber));
-      for (final ChangeInfo info : related) {
-        atomicityHelper.mergeReview(info);
-      }
-    } else {
-      if (approvedButNotMergeable) {
+
+    if (submittable) {
+      if (mergeable) {
+        log.debug(String.format("Change %d is mergeable", reviewNumber));
+        for (final ChangeInfo info : related) {
+          atomicityHelper.mergeReview(info);
+        }
+      } else {
         reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
       }
     }
