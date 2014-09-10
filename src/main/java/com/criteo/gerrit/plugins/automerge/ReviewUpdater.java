@@ -3,15 +3,9 @@ package com.criteo.gerrit.plugins.automerge;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 import com.google.gerrit.extensions.api.changes.ReviewInput;
-import com.google.gerrit.extensions.restapi.AuthException;
-import com.google.gerrit.extensions.restapi.BadRequestException;
 import com.google.gerrit.extensions.restapi.RestApiException;
-import com.google.gerrit.extensions.restapi.UnprocessableEntityException;
-import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.server.ReviewDb;
-import com.google.gerrit.server.IdentifiedUser;
-import com.google.gerrit.server.account.AccountByEmailCache;
 import com.google.gerrit.server.change.ChangesCollection;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.RevisionResource;
@@ -27,13 +21,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Set;
 
 public class ReviewUpdater {
   private final static Logger log = LoggerFactory.getLogger(AutomaticMerger.class);
-
-  @Inject
-  private AccountByEmailCache byEmailCache;
 
   @Inject
   ChangeData.Factory changeDataFactory;
@@ -49,9 +39,6 @@ public class ReviewUpdater {
 
   @Inject
   Provider<ReviewDb> db;
-
-  @Inject
-  private IdentifiedUser.GenericFactory factory;
 
   @Inject
   Provider<PostReview> reviewer;

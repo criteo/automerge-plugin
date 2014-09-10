@@ -17,23 +17,13 @@ package com.criteo.gerrit.plugins.automerge;
 import com.google.common.collect.Lists;
 import com.google.gerrit.common.ChangeListener;
 import com.google.gerrit.extensions.api.GerritApi;
-import com.google.gerrit.extensions.api.changes.SubmitInput;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.common.ListChangesOption;
 import com.google.gerrit.extensions.events.LifecycleListener;
-import com.google.gerrit.extensions.restapi.AuthException;
-import com.google.gerrit.extensions.restapi.BadRequestException;
 import com.google.gerrit.extensions.restapi.RestApiException;
-import com.google.gerrit.extensions.restapi.UnprocessableEntityException;
-import com.google.gerrit.reviewdb.client.Account;
-import com.google.gerrit.reviewdb.client.Change;
 import com.google.gerrit.reviewdb.server.ReviewDb;
-import com.google.gerrit.server.IdentifiedUser;
-import com.google.gerrit.server.account.AccountByEmailCache;
-import com.google.gerrit.server.change.ChangesCollection;
 import com.google.gerrit.server.change.GetRelated;
 import com.google.gerrit.server.change.PostReview;
-import com.google.gerrit.server.change.RevisionResource;
 import com.google.gerrit.server.change.Submit;
 import com.google.gerrit.server.data.ChangeAttribute;
 import com.google.gerrit.server.events.ChangeEvent;
@@ -41,7 +31,6 @@ import com.google.gerrit.server.events.CommentAddedEvent;
 import com.google.gerrit.server.events.PatchSetCreatedEvent;
 import com.google.gerrit.server.events.TopicChangedEvent;
 import com.google.gerrit.server.git.MergeUtil;
-import com.google.gerrit.server.project.ChangeControl;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
@@ -54,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Starts at the same time as the gerrit server, and sets up our change hook
@@ -71,25 +59,13 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   private AtomicityHelper atomicityHelper;
 
   @Inject
-  private AccountByEmailCache byEmailCache;
-
-  @Inject
   ChangeData.Factory changeDataFactory;
-
-  @Inject
-  private ChangeControl.GenericFactory changeFactory;
-
-  @Inject
-  private ChangesCollection collection;
 
   @Inject
   private AutomergeConfig config;
 
   @Inject
   Provider<ReviewDb> db;
-
-  @Inject
-  private IdentifiedUser.GenericFactory factory;
 
   @Inject
   GetRelated getRelated;
