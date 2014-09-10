@@ -64,7 +64,7 @@ public class ReviewUpdater {
 
   private ReviewInput createCrossrepoComment(final String commentTemplate) {
     final ReviewInput message = new ReviewInput();
-    message.message = config.getCommentPrefix() + " " + getCommentFromFile(commentTemplate);
+    message.message = config.getCommentPrefix() + getCommentFromFile(commentTemplate);
     return message;
   }
 }

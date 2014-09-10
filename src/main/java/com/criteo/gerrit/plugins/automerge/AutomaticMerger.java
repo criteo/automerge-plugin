@@ -110,8 +110,14 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
-    // Avoid infinite loop when this plugin comments the review
-    if (config.getBotEmail().equals(newComment.author.email) && newComment.comment.startsWith(config.getCommentPrefix())) {
+    // Avoid infinite loop when this plugin comments the review.
+    //
+    // A plugin comment will typically look like:
+    // Patch Set 1:
+    //
+    // Cross-repo comment:
+    // ...
+    if (config.getBotEmail().equals(newComment.author.email) && newComment.comment.contains(config.getCommentPrefix())) {
       return;
     }
 

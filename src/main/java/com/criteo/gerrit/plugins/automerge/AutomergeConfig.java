@@ -21,7 +21,7 @@ public class AutomergeConfig {
   private final static String defaultBotEmail = "qabot@criteo.com";
   private final static String defaultTopicPrefix = "crossrepo/";
   public final static String TOPIC_PREFIX_KEY = "topicPrefix";
-  private final static String defaultCommentPrefix = "[crossrepo]";
+  private final static String defaultCommentPrefix = "Cross-repo comment:" + System.lineSeparator();
   public final static String COMMENT_PREFIX_KEY = "commitPrefix";
 
   public static final String getDefaultBotEmail() {
