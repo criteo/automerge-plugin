@@ -192,7 +192,6 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
   private void processNewAtomicPatchSet(final ChangeAttribute change) {
     final int reviewNumber = Integer.parseInt(change.number);
-    log.info(String.format("Change on review %d is a topic change.", reviewNumber));
     try {
       api.changes().id(reviewNumber).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
     } catch (final RestApiException e1) {
