@@ -110,7 +110,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
-    if (newComment.author.email == config.getBotEmail()) {
+    if (config.getBotEmail().equals(newComment.author.email)) {
       return;
     }
 
