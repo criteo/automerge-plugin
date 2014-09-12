@@ -1,9 +1,23 @@
-Create review1 on repo1.
-Create review1b on top of review1. Set the topic to "crossrepo/test":
+One repo:
+
+Create review0 on repo1.
+Create review0b on top of review1. Set the topic to "crossrepo/test":
   log: Setting -1
   qabot Code-review -1
   message: "This review depends on an unmerged commit."
-Abandon review1b
+Abandon review0b
+Create a parallel review0c on repo1 that conflicts with review0.
+Submit review0c.
+Approve review0:
+  logged: "Change %d is submittable. Will try to merge all related changes."
+  comment: "This review is not mergeable because there is a conflict."
+Make review0 mergeable by rebasing.
+approve review0:
+  merged: review0
+
+Two repos:
+
+Create review1 on repo1.
 Set to the topic of review1 to "crossrepo/test":
   message: "This review is a cross-repo refactoring. It will be merged when all dependant reviews are mergeable."
   logged: "Detected atomic review on change xxx."
@@ -14,7 +28,8 @@ Make review2 submittable:
   logged: "Change %d is submittable. Will try to merge all related changes."
 Approve review1 but make it not mergeable (merge an other review that conflicts), then comment on review2: 
   logged: "Change %d is submittable. Will try to merge all related changes."
-  comment: "Some related reviews to this cross-repo refactoring are not mergeable yet."
+  comment: "This review is not mergeable because there is a conflict."
 Make review1 mergeable:
   log DEBUG: "Change %d is mergeable"
   merged: review1 and review2
+

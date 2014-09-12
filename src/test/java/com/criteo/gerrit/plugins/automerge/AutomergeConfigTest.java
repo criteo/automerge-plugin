@@ -36,12 +36,10 @@ public class AutomergeConfigTest {
 
       conf.setString(AutomergeConfig.AUTOMERGE_SECTION, null, AutomergeConfig.BOT_EMAIL_KEY, "Foo@bar.com");
       conf.setString(AutomergeConfig.AUTOMERGE_SECTION, null, AutomergeConfig.TOPIC_PREFIX_KEY, "fake_topic_prefix");
-      conf.setString(AutomergeConfig.AUTOMERGE_SECTION, null, AutomergeConfig.COMMENT_PREFIX_KEY, "fake_comment_prefix");
 
       final AutomergeConfig amconf = new AutomergeConfig(conf, paths);
       assertEquals(amconf.getBotEmail(), "Foo@bar.com");
       assertEquals(amconf.getTopicPrefix(), "fake_topic_prefix");
-      assertEquals(amconf.getCommentPrefix(), "fake_comment_prefix");
     } catch (final FileNotFoundException e) {
       fail();
     }

@@ -25,6 +25,7 @@ import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.change.GetRelated;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.Submit;
+import com.google.gerrit.server.data.ApprovalAttribute;
 import com.google.gerrit.server.data.ChangeAttribute;
 import com.google.gerrit.server.events.ChangeEvent;
 import com.google.gerrit.server.events.CommentAddedEvent;
@@ -110,14 +111,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
-    // Avoid infinite loop when this plugin comments the review.
-    //
-    // A plugin comment will typically look like:
-    // Patch Set 1:
-    //
-    // Cross-repo comment:
-    // ...
-    if (config.getBotEmail().equals(newComment.author.email) && newComment.comment.contains(config.getCommentPrefix())) {
+    if (!shouldProcessCommentEvent(newComment)) {
       return;
     }
 
@@ -133,6 +127,26 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
       log.error("An exception occured while trying to atomic merge a change.", e);
       throw new RuntimeException(e);
     }
+  }
+
+  /**
+   * Returns true if the plugin must handle this comment, i.e. if we are sure it does not come
+   * from this plugin (to avoid infinite loop).
+   *
+   * @param comment
+   * @return a boolean
+   */
+  private boolean shouldProcessCommentEvent(CommentAddedEvent comment) {
+    if (!config.getBotEmail().equals(comment.author.email)) {
+      return true;
+    }
+    for (ApprovalAttribute approval : comment.approvals) {
+      // See ReviewUpdate#setMinusOne
+      if (!("Code-Review".equals(approval.type) && "-1".equals(approval.value))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException {
