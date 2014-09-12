@@ -140,10 +140,12 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
     if (!config.getBotEmail().equals(comment.author.email)) {
       return true;
     }
-    for (ApprovalAttribute approval : comment.approvals) {
-      // See ReviewUpdate#setMinusOne
-      if (!("Code-Review".equals(approval.type) && "-1".equals(approval.value))) {
-        return true;
+    if (comment.approvals != null) {
+      for (ApprovalAttribute approval : comment.approvals) {
+        // See ReviewUpdate#setMinusOne
+        if (!("Code-Review".equals(approval.type) && "-1".equals(approval.value))) {
+          return true;
+        }
       }
     }
     return false;
