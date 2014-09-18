@@ -153,9 +153,8 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
 
   private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException {
     final List<ChangeInfo> related = Lists.newArrayList();
-    final String topic = change.topic;
-    if (topic != null) {
-      related.addAll(api.changes().query("status: open AND topic: " + topic)
+    if (atomicityHelper.isAtomicReview(change)) {
+      related.addAll(api.changes().query("status: open AND topic: " + change.topic)
           .withOption(ListChangesOption.CURRENT_REVISION).get());
     } else {
       related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
