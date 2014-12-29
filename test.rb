@@ -72,6 +72,18 @@ class TestAutomerge < MiniTest::Test
     check_status(commit2, 'MERGED')
   end
 
+  def test_two_reviews_with_same_changed_id
+    commit1 = create_review(PROJECT1, "review1 on #{PROJECT1}")
+    change_id = read_change_id(PROJECT1)
+    abandon_review(commit1)
+    # Reuse Change-Id of abandoned review
+    commit2 = create_review(PROJECT2, "review2 on #{PROJECT2}", nil, change_id)
+
+    approve_review(commit2)
+
+    check_status(commit2, 'MERGED')
+  end
+
   private
 
   def project_dir(project_name)
@@ -92,8 +104,17 @@ class TestAutomerge < MiniTest::Test
     end
   end
 
-  def create_review(project_name, message, topic = nil)
+  def read_change_id(project_name, commit_id = "HEAD")
+    change_id = execute(["cd #{project_dir(project_name)}",
+                         "git show #{commit_id} | grep Change-Id | sed 's/^.*Change-Id: \\([Ia-f0-9]*\\)$/\\1/'"
+                        ].join(" && "))
+    refute(change_id.empty?, "missing change-id")
+    change_id
+  end
+
+  def create_review(project_name, message, topic = nil, change_id = nil)
     topic_suffix = "/#{topic}" if topic
+    message = "#{message}\n\nChange-Id: #{change_id}" if change_id
     execute(["cd #{project_dir(project_name)}",
              "echo 0 >> a",
              %Q(git commit -m "#{message}" .),
@@ -106,6 +127,10 @@ class TestAutomerge < MiniTest::Test
 
   def approve_review(commit_id)
     execute("#{GERRIT_SSH} gerrit review --verified 1 --code-review 2 #{commit_id}")
+  end
+
+  def abandon_review(commit_id)
+    execute("#{GERRIT_SSH} gerrit review --abandon #{commit_id}")
   end
 
   def check_status(commit_id, expected_status)

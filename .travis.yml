@@ -26,12 +26,13 @@ install:
   - ant
   - export PATH=$PATH:$TRAVIS_BUILD_DIR/../../build/buck/bin
   - cd ..
-  - git clone https://gerrit.googlesource.com/gerrit
+  - git clone -b stable-2.10 https://gerrit.googlesource.com/gerrit
   - cd gerrit
   - ln -s $TRAVIS_BUILD_DIR plugins
   - travis_retry tools/download_all.py > download.log
 
 script:
+  - buck clean
   - buck build gerrit > buck.log
   - buck build plugins/automerge-plugin:automerge-plugin >> buck.log
 
