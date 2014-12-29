@@ -17,6 +17,7 @@ package com.criteo.gerrit.plugins.automerge;
 import com.google.common.collect.Lists;
 import com.google.gerrit.common.ChangeListener;
 import com.google.gerrit.extensions.api.GerritApi;
+import com.google.gerrit.extensions.api.changes.ChangeApi;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.common.ListChangesOption;
 import com.google.gerrit.extensions.events.LifecycleListener;
@@ -157,12 +158,12 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
       related.addAll(api.changes().query("status: open AND topic: " + change.topic)
           .withOption(ListChangesOption.CURRENT_REVISION).get());
     } else {
-      related.add(api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
+      ChangeApi changeApi = api.changes().id(change.project, change.branch, change.id);
+      related.add(changeApi.get(EnumSet.of(ListChangesOption.CURRENT_REVISION)));
     }
     boolean submittable = true;
     boolean mergeable = true;
     for (final ChangeInfo info : related) {
-      api.changes().id(change.id).get(EnumSet.of(ListChangesOption.CURRENT_REVISION));
       if (!info.mergeable) {
         mergeable = false;
       }
