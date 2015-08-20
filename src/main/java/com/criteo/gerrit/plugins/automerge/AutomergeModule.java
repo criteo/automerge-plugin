@@ -14,7 +14,7 @@
 
 package com.criteo.gerrit.plugins.automerge;
 
-import com.google.gerrit.common.ChangeListener;
+import com.google.gerrit.common.EventListener;
 import com.google.gerrit.extensions.registration.DynamicSet;
 import com.google.inject.AbstractModule;
 
@@ -27,7 +27,7 @@ public class AutomergeModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    DynamicSet.bind(binder(), ChangeListener.class).to(AutomaticMerger.class);
+    DynamicSet.bind(binder(), EventListener.class).to(AutomaticMerger.class);
     bind(AutomergeConfig.class).asEagerSingleton();
     bind(AtomicityHelper.class);
     bind(ReviewUpdater.class);

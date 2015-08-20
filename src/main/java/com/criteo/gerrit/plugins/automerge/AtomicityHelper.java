@@ -19,6 +19,7 @@ import com.google.gerrit.server.data.ChangeAttribute;
 import com.google.gerrit.server.git.MergeUtil;
 import com.google.gerrit.server.project.ChangeControl;
 import com.google.gerrit.server.project.NoSuchChangeException;
+import com.google.gerrit.server.project.SubmitRuleEvaluator;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
 import com.google.inject.Inject;
@@ -107,7 +108,7 @@ public class AtomicityHelper {
    */
   public boolean isSubmittable(final int change) throws OrmException {
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(change));
-    final List<SubmitRecord> cansubmit = changeData.changeControl().canSubmit(db.get(), changeData.currentPatchSet());
+    final List<SubmitRecord> cansubmit = new SubmitRuleEvaluator(changeData).evaluate();
     log.debug(String.format("Checking if change %d is submitable.", change));
     for (final SubmitRecord submit : cansubmit) {
       if (submit.status != SubmitRecord.Status.OK) {

@@ -15,11 +15,11 @@
 package com.criteo.gerrit.plugins.automerge;
 
 import com.google.common.collect.Lists;
-import com.google.gerrit.common.ChangeListener;
+import com.google.gerrit.common.EventListener;
 import com.google.gerrit.extensions.api.GerritApi;
 import com.google.gerrit.extensions.api.changes.ChangeApi;
 import com.google.gerrit.extensions.common.ChangeInfo;
-import com.google.gerrit.extensions.common.ListChangesOption;
+import com.google.gerrit.extensions.client.ListChangesOption;
 import com.google.gerrit.extensions.events.LifecycleListener;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import com.google.gerrit.reviewdb.server.ReviewDb;
@@ -28,8 +28,8 @@ import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.Submit;
 import com.google.gerrit.server.data.ApprovalAttribute;
 import com.google.gerrit.server.data.ChangeAttribute;
-import com.google.gerrit.server.events.ChangeEvent;
 import com.google.gerrit.server.events.CommentAddedEvent;
+import com.google.gerrit.server.events.Event;
 import com.google.gerrit.server.events.PatchSetCreatedEvent;
 import com.google.gerrit.server.events.TopicChangedEvent;
 import com.google.gerrit.server.git.MergeUtil;
@@ -50,7 +50,7 @@ import java.util.List;
  * Starts at the same time as the gerrit server, and sets up our change hook
  * listener.
  */
-public class AutomaticMerger implements ChangeListener, LifecycleListener {
+public class AutomaticMerger implements EventListener, LifecycleListener {
 
   private final static Logger log = LoggerFactory.getLogger(AutomaticMerger.class);
 
@@ -85,7 +85,7 @@ public class AutomaticMerger implements ChangeListener, LifecycleListener {
   Submit submitter;
 
   @Override
-  synchronized public void onChangeEvent(final ChangeEvent event) {
+  synchronized public void onEvent(final Event event) {
     if (event instanceof TopicChangedEvent) {
       onTopicChanged((TopicChangedEvent)event);
     }
