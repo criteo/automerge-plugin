@@ -4,6 +4,7 @@
 # Required local configuration:
 # - gerrit running on 0.0.0.0:29418
 # - 2 cloned projects
+# - local user must be an owner of these repos
 
 gem "minitest"
 require 'minitest/autorun'
@@ -48,7 +49,7 @@ class TestAutomerge < MiniTest::Test
     commit0 = create_review(PROJECT1, "review0 on #{PROJECT1}")
     commit0b = create_review(PROJECT1, "review0b on #{PROJECT1}", "crossrepo/topic1")
     check_label(commit0b, "Code-Review", "-1")
-    #TODO: check_message_contains(commit0b, "atomic_repo_same_review.txt")
+    check_last_message_contains(commit0b, "atomic_review_same_repo.txt")
   end
 
   def test_normal_topic_2_repos
@@ -117,7 +118,8 @@ class TestAutomerge < MiniTest::Test
     message = "#{message}\n\nChange-Id: #{change_id}" if change_id
     execute(["cd #{project_dir(project_name)}",
              "echo 0 >> a",
-             %Q(git commit -m "#{message}" .),
+             "git add .",
+             %Q(git commit -m "#{message}"),
              "git push origin HEAD:refs/for/master#{topic_suffix}"
             ].join(" && "))
     commit_id = execute("cd #{project_dir(project_name)} && git rev-parse HEAD")
@@ -149,10 +151,12 @@ class TestAutomerge < MiniTest::Test
     assert_equal(expected_label_value, code_review_approvals[0]['value'], "wrong label on review: #{review['number']}")
   end
 
-# TODO Solve internal error when fetching comments
-#  def check_message_contains(commit_id, expected_content)
-#    reviews = gerrit_query("commit:#{commit_id}", "--comments")
-#  end
+  def check_last_message_contains(commit_id, expected_content)
+    reviews = gerrit_query("commit:#{commit_id}", "--comments")
+    assert_equal(1, reviews.size, "missing review with commit #{commit_id}")
+    messages = reviews[0]['comments'].map{|comment| comment['message'] }
+    assert(messages.last.include?(expected_content), "missing comment containing '#{expected_content}'")
+  end
 
   def gerrit_query(query, options = "")
     jsons = `#{GERRIT_SSH} gerrit query --format JSON #{options} '#{query}' | grep -v type\\"\\:\\"stats`
