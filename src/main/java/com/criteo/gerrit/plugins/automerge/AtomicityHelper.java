@@ -108,7 +108,8 @@ public class AtomicityHelper {
    */
   public boolean isSubmittable(final int change) throws OrmException {
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(change));
-    final List<SubmitRecord> cansubmit = new SubmitRuleEvaluator(changeData).evaluate();
+    // For draft reviews, the patchSet must be set to avoid an NPE.
+    final List<SubmitRecord> cansubmit = new SubmitRuleEvaluator(changeData).setPatchSet(changeData.currentPatchSet()).evaluate();
     log.debug(String.format("Checking if change %d is submitable.", change));
     for (final SubmitRecord submit : cansubmit) {
       if (submit.status != SubmitRecord.Status.OK) {
