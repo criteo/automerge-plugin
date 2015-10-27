@@ -136,8 +136,8 @@ public class AtomicityHelper {
   }
 
   public RevisionResource getRevisionResource(int changeNumber) throws NoSuchChangeException, OrmException {
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(changeNumber), getBotUser());
     final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(changeNumber));
+    final ChangeControl ctl = changeFactory.controlFor(changeData.change(), getBotUser());
     final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     return r;
   }
