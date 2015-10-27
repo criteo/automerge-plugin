@@ -14,8 +14,14 @@
 
 language: java
 
-before_install:
-  - sudo apt-get install automake autoconf autogen
+sudo: false
+
+addons:
+  apt:
+    pakages:
+    - automake
+    - autoconf
+    - autogen
 
 install:
   - cd ../..
