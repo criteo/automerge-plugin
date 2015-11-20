@@ -45,7 +45,7 @@ public class AutomergeConfig {
       topicPrefix = defaultTopicPrefix;
     }
 
-    templatesPath = paths.etc_dir;
+    templatesPath = paths.etc_dir.toFile();
   }
 
   public final String getBotEmail() {

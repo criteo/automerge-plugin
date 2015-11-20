@@ -33,6 +33,7 @@ import com.google.gerrit.server.events.Event;
 import com.google.gerrit.server.events.PatchSetCreatedEvent;
 import com.google.gerrit.server.events.TopicChangedEvent;
 import com.google.gerrit.server.git.MergeUtil;
+import com.google.gerrit.server.git.UpdateException;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
@@ -124,7 +125,7 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
         log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
         attemptToMerge(change);
       }
-    } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
+    } catch (final RestApiException | NoSuchChangeException | OrmException | UpdateException | IOException e) {
       log.error("An exception occured while trying to atomic merge a change.", e);
       throw new RuntimeException(e);
     }
@@ -152,7 +153,7 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
     return false;
   }
 
-  private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException {
+  private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException, UpdateException {
     final List<ChangeInfo> related = Lists.newArrayList();
     if (atomicityHelper.isAtomicReview(change)) {
       related.addAll(api.changes().query("status: open AND topic: " + change.topic)
@@ -197,7 +198,7 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
         log.info(String.format("Detected atomic review on change %d.", reviewNumber));
         reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
       }
-    } catch (RestApiException | IOException | NoSuchChangeException | OrmException e) {
+    } catch (RestApiException | IOException | NoSuchChangeException | OrmException | UpdateException e) {
       throw new RuntimeException(e);
     }
   }

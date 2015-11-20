@@ -10,6 +10,7 @@ import com.google.gerrit.extensions.restapi.UnprocessableEntityException;
 import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.RevisionResource;
+import com.google.gerrit.server.git.UpdateException;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
@@ -40,12 +41,12 @@ public class ReviewUpdater {
   @Inject
   private AtomicityHelper atomicityHelper;
 
-  public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
+  public void commentOnReview(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException, UpdateException {
     final ReviewInput comment = createComment(commentTemplate);
     applyComment(number, comment);
   }
 
-  public void setMinusOne(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException {
+  public void setMinusOne(final int number, final String commentTemplate) throws RestApiException, OrmException, IOException, NoSuchChangeException, UpdateException {
     final ReviewInput message = createComment(commentTemplate).label("Code-Review", -1);
     applyComment(number, message);
   }
@@ -65,7 +66,7 @@ public class ReviewUpdater {
      }
    }
 
-  private void applyComment(final int number, ReviewInput comment) throws RestApiException, OrmException, IOException, NoSuchChangeException {
+  private void applyComment(final int number, ReviewInput comment) throws RestApiException, OrmException, IOException, NoSuchChangeException, UpdateException {
     final RevisionResource r = atomicityHelper.getRevisionResource(number);
     reviewer.get().apply(r, comment);
   }
