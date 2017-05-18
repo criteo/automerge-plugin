@@ -1,7 +1,7 @@
 automerge-plugin
 ================
 
-[![Build Status](https://gerrit-ci.gerritforge.com/job/plugin-automerge-plugin-gh-master/badge/icon)](https://gerrit-ci.gerritforge.com/job/plugin-automerge-plugin-gh-master/)
+[![Build Status](https://gerrit-ci.gerritforge.com/view/Plugins-stable-2.14/job/plugin-automerge-plugin-gh-bazel-stable-2.14/badge/icon)](https://gerrit-ci.gerritforge.com/view/Plugins-stable-2.14/job/plugin-automerge-plugin-gh-bazel-stable-2.14/)
 
 A [gerrit](https://www.gerritcodereview.com) plugin that takes care of
 automatically merging reviews when all approvals are present.
