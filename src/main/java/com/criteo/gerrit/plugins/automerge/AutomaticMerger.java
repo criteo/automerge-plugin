@@ -26,6 +26,7 @@ import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.change.GetRelated;
 import com.google.gerrit.server.change.PostReview;
 import com.google.gerrit.server.change.Submit;
+import com.google.gerrit.server.data.AccountAttribute;
 import com.google.gerrit.server.data.ApprovalAttribute;
 import com.google.gerrit.server.data.ChangeAttribute;
 import com.google.gerrit.server.events.CommentAddedEvent;
@@ -33,6 +34,7 @@ import com.google.gerrit.server.events.Event;
 import com.google.gerrit.server.events.PatchSetCreatedEvent;
 import com.google.gerrit.server.events.TopicChangedEvent;
 import com.google.gerrit.server.git.MergeUtil;
+import com.google.gerrit.server.update.UpdateException;
 import com.google.gerrit.server.project.NoSuchChangeException;
 import com.google.gerrit.server.query.change.ChangeData;
 import com.google.gwtorm.server.OrmException;
@@ -98,17 +100,19 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
   }
 
   private void onTopicChanged(final TopicChangedEvent event) {
-    if (!atomicityHelper.isAtomicReview(event.change)) {
+    ChangeAttribute change = event.change.get();
+    if (!atomicityHelper.isAtomicReview(change)) {
       return;
     }
-    processNewAtomicPatchSet(event.change);
+    processNewAtomicPatchSet(change);
   }
 
   private void onPatchSetCreated(final PatchSetCreatedEvent event) {
-    if (!atomicityHelper.isAtomicReview(event.change)) {
+    ChangeAttribute change = event.change.get();
+    if (!atomicityHelper.isAtomicReview(change)) {
       return;
     }
-    processNewAtomicPatchSet(event.change);
+    processNewAtomicPatchSet(change);
   }
 
   private void onCommendAdded(final CommentAddedEvent newComment) {
@@ -116,15 +120,14 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
       return;
     }
 
-    final ChangeAttribute change = newComment.change;
-    final int reviewNumber = Integer.parseInt(change.number);
+    ChangeAttribute change = newComment.change.get();
     try {
-      checkReviewExists(reviewNumber);
-      if (atomicityHelper.isSubmittable(reviewNumber)) {
-        log.info(String.format("Change %d is submittable. Will try to merge all related changes.", reviewNumber));
+      checkReviewExists(change.number);
+      if (atomicityHelper.isSubmittable(change.project, change.number)) {
+        log.info(String.format("Change %d is submittable. Will try to merge all related changes.", change.number));
         attemptToMerge(change);
       }
-    } catch (final RestApiException | NoSuchChangeException | OrmException | IOException e) {
+    } catch (RestApiException | OrmException | UpdateException | IOException e) {
       log.error("An exception occured while trying to atomic merge a change.", e);
       throw new RuntimeException(e);
     }
@@ -138,11 +141,13 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
    * @return a boolean
    */
   private boolean shouldProcessCommentEvent(CommentAddedEvent comment) {
-    if (!config.getBotEmail().equals(comment.author.email)) {
+    AccountAttribute account = comment.author.get();
+    if (!config.getBotEmail().equals(account.email)) {
       return true;
     }
-    if (comment.approvals != null) {
-      for (ApprovalAttribute approval : comment.approvals) {
+    ApprovalAttribute[] approvals = comment.approvals.get();
+    if (approvals != null) {
+      for (ApprovalAttribute approval : approvals) {
         // See ReviewUpdate#setMinusOne
         if (!("Code-Review".equals(approval.type) && "-1".equals(approval.value))) {
           return true;
@@ -152,7 +157,7 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
     return false;
   }
 
-  private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException {
+  private void attemptToMerge(ChangeAttribute change) throws RestApiException, OrmException, NoSuchChangeException, IOException, UpdateException {
     final List<ChangeInfo> related = Lists.newArrayList();
     if (atomicityHelper.isAtomicReview(change)) {
       related.addAll(api.changes().query("status: open AND topic: " + change.topic)
@@ -167,37 +172,35 @@ public class AutomaticMerger implements EventListener, LifecycleListener {
       if (!info.mergeable) {
         mergeable = false;
       }
-      if (!atomicityHelper.isSubmittable(info._number)) {
+      if (!atomicityHelper.isSubmittable(info.project, info._number)) {
         submittable = false;
       }
     }
-    final int reviewNumber = Integer.parseInt(change.number);
 
     if (submittable) {
       if (mergeable) {
-        log.debug(String.format("Change %d is mergeable", reviewNumber));
+        log.debug(String.format("Change %d is mergeable", change.number));
         for (final ChangeInfo info : related) {
           atomicityHelper.mergeReview(info);
         }
       } else {
-        reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
+	  reviewUpdater.commentOnReview(change.project, change.number, AutomergeConfig.CANT_MERGE_COMMENT_FILE);
       }
     }
   }
 
-  private void processNewAtomicPatchSet(final ChangeAttribute change) {
-    final int reviewNumber = Integer.parseInt(change.number);
+  private void processNewAtomicPatchSet(ChangeAttribute change) {
     try {
-      checkReviewExists(reviewNumber);
-      if (atomicityHelper.hasDependentReview(reviewNumber)) {
+      checkReviewExists(change.number);
+      if (atomicityHelper.hasDependentReview(change.project, change.number)) {
         log.info(String.format("Warn the user by setting -1 on change %d, as other atomic changes exists on the same repository.",
-            reviewNumber));
-        reviewUpdater.setMinusOne(reviewNumber, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
+            change.number));
+        reviewUpdater.setMinusOne(change.project, change.number, AutomergeConfig.ATOMIC_REVIEWS_SAME_REPO_FILE);
       } else {
-        log.info(String.format("Detected atomic review on change %d.", reviewNumber));
-        reviewUpdater.commentOnReview(reviewNumber, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
+        log.info(String.format("Detected atomic review on change %d.", change.number));
+        reviewUpdater.commentOnReview(change.project, change.number, AutomergeConfig.ATOMIC_REVIEW_DETECTED_FILE);
       }
-    } catch (RestApiException | IOException | NoSuchChangeException | OrmException e) {
+    } catch (RestApiException | IOException | OrmException | UpdateException e) {
       throw new RuntimeException(e);
     }
   }

@@ -6,6 +6,7 @@ import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import com.google.gerrit.reviewdb.client.Account;
 import com.google.gerrit.reviewdb.client.Change;
+import com.google.gerrit.reviewdb.client.Project;
 import com.google.gerrit.reviewdb.server.ReviewDb;
 import com.google.gerrit.server.IdentifiedUser;
 import com.google.gerrit.server.account.AccountByEmailCache;
@@ -73,15 +74,16 @@ public class AtomicityHelper {
    * Check if the current patchset of the specified change has dependent
    * unmerged changes.
    *
+   * @param project
    * @param number
    * @return true or false
    * @throws IOException
    * @throws NoSuchChangeException
    * @throws OrmException
    */
-  public boolean hasDependentReview(final int number) throws IOException, NoSuchChangeException, OrmException {
-    final RevisionResource r = getRevisionResource(number);
-    final RelatedInfo related = getRelated.apply(r);
+  public boolean hasDependentReview(String project, int number) throws IOException, NoSuchChangeException, OrmException {
+      RevisionResource r = getRevisionResource(project, number);
+    RelatedInfo related = getRelated.apply(r);
     log.debug(String.format("Checking for related changes on review %d", number));
     return related.changes.size() > 0;
   }
@@ -102,16 +104,17 @@ public class AtomicityHelper {
   /**
    * Check if a change is submitable.
    *
+   * @param project a change project
    * @param change a change number
    * @return true or false
    * @throws OrmException
    */
-  public boolean isSubmittable(final int change) throws OrmException {
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(change));
+  public boolean isSubmittable(String project, int change) throws OrmException {
+    ChangeData changeData = changeDataFactory.create(db.get(), new Project.NameKey(project), new Change.Id(change));
     // For draft reviews, the patchSet must be set to avoid an NPE.
     final List<SubmitRecord> cansubmit = new SubmitRuleEvaluator(changeData).setPatchSet(changeData.currentPatchSet()).evaluate();
     log.debug(String.format("Checking if change %d is submitable.", change));
-    for (final SubmitRecord submit : cansubmit) {
+    for (SubmitRecord submit : cansubmit) {
       if (submit.status != SubmitRecord.Status.OK) {
         log.debug(String.format("Change %d is not submitable", change));
         return false;
@@ -133,14 +136,14 @@ public class AtomicityHelper {
   public void mergeReview(ChangeInfo info) throws RestApiException, NoSuchChangeException, OrmException, IOException {
     final SubmitInput input = new SubmitInput();
     input.waitForMerge = true;
-    final RevisionResource r = getRevisionResource(info._number);
+    final RevisionResource r = getRevisionResource(info.project, info._number);
     submitter.apply(r, input);
   }
 
-  public RevisionResource getRevisionResource(int changeNumber) throws NoSuchChangeException, OrmException {
-    final ChangeControl ctl = changeFactory.controlFor(new Change.Id(changeNumber), getBotUser());
-    final ChangeData changeData = changeDataFactory.create(db.get(), new Change.Id(changeNumber));
-    final RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
+  public RevisionResource getRevisionResource(String project, int changeNumber) throws NoSuchChangeException, OrmException {
+    ChangeControl ctl = changeFactory.validateFor(db.get(), new Change.Id(changeNumber), getBotUser());
+    ChangeData changeData = changeDataFactory.create(db.get(), new Project.NameKey(project), new Change.Id(changeNumber));
+    RevisionResource r = new RevisionResource(collection.parse(ctl), changeData.currentPatchSet());
     return r;
   }
 

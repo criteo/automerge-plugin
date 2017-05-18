@@ -8,16 +8,17 @@ import com.google.gerrit.server.config.SitePaths;
 import org.eclipse.jgit.lib.Config;
 import org.junit.Test;
 
-import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Paths;
 
 public class AutomergeConfigTest {
 
   @Test
-  public void testGetDefaultConfig() {
+  public void testGetDefaultConfig() throws IOException {
     final Config conf = new Config();
     try {
-      final SitePaths paths = new SitePaths(new File("."));
+      final SitePaths paths = new SitePaths(Paths.get("."));
 
       final AutomergeConfig amconf = new AutomergeConfig(conf, paths);
 
@@ -29,10 +30,10 @@ public class AutomergeConfigTest {
   }
 
   @Test
-  public void testGetValues() {
+  public void testGetValues() throws IOException {
     final Config conf = new Config();
     try {
-      final SitePaths paths = new SitePaths(new File("."));
+      final SitePaths paths = new SitePaths(Paths.get("."));
 
       conf.setString(AutomergeConfig.AUTOMERGE_SECTION, null, AutomergeConfig.BOT_EMAIL_KEY, "Foo@bar.com");
       conf.setString(AutomergeConfig.AUTOMERGE_SECTION, null, AutomergeConfig.TOPIC_PREFIX_KEY, "fake_topic_prefix");
